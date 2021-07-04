@@ -57,9 +57,8 @@ It further shares how collected data can be used to inform a different Machine L
 <!-- Credits -->
 ## Credits
 
-Developed by: Hesham Shawqy, João Silva, Polina Hadjimitova, Varun Mehta
+IN-BETWEEN SPACES is a project of IAAC, Institute for Advanced Architecture of Catalonia developed in the Master in Advanced Computation for Architecture & Design in 2020/21 by Hesham Shawqy, João Silva, Polina Hadjimitova, and Varun Mehta. Faculty: Angelos Chronis and  Lea Khairallah.
 
-INBETWEENSPACES is a studio project of the Artificial Intelligence in Architecture Module as a part of the MACAD Program at IAAC(https://iaac.net/).
 <br />This compilation is a dissemination of our project and the processes involved. It documents the various tools and methods we used to build the project. The intent of this documentation is to enable anyone to replicate and grow on any/all parts of the project.
 
 <!-- Pix2Pix Data -->
