@@ -60,7 +60,7 @@ It further shares how collected data can be used to inform a different Machine L
 Developed by: Hesham Shawqy, João Silva, Polina Hadjimitova, Varun Mehta
 
 INBETWEENSPACES is a studio project of the Artificial Intelligence in Architecture Module as a part of the MACAD Program at IAAC(https://iaac.net/).
-This compilation is a dissemination of our project and the processes involved. It documents the various tools and methods we used to build the project. The intent of this documentation is to enable anyone to replicate and grow on any/all parts of the project.
+<br />This compilation is a dissemination of our project and the processes involved. It documents the various tools and methods we used to build the project. The intent of this documentation is to enable anyone to replicate and grow on any/all parts of the project.
 
 <!-- Pix2Pix Data -->
 ## Pix2Pix Data
