@@ -1,0 +1,243 @@
+//1. Use this code to post the mapbox coordinates on Google spreadsheet. Create a spreadsheet, go to Tools> Script Editor> Code.gs
+
+
+
+function doGet(e){
+  try {
+    Logger.log(e); // the Google Script version of console.log see: Class Logger
+    record_data(e);
+  
+    return ContentService    // return json success results
+          .createTextOutput(
+            JSON.stringify({"result":"success",
+                            "data": JSON.stringify(e.parameters) }))
+          .setMimeType(ContentService.MimeType.JSON);
+  } catch(error) { // if error return this
+    Logger.log(error);
+    return ContentService
+          .createTextOutput(JSON.stringify({"result":"error", "error": error}))
+          .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+
+  try {
+    Logger.log(e); // the Google Script version of console.log see: Class Logger
+    record_data(e);
+  
+    return ContentService    // return json success results
+          .createTextOutput(
+            JSON.stringify({"result":"success",
+                            "data": JSON.stringify(e.parameters) }))
+          .setMimeType(ContentService.MimeType.JSON);
+  } catch(error) { // if error return this
+    Logger.log(error);
+    return ContentService
+          .createTextOutput(JSON.stringify({"result":"error", "error": error}))
+          .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+
+
+/**
+ * record_data inserts the data received from the html form submission
+ * e is the data received from the POST
+ */
+function record_data(e) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000); // hold off up to 30 sec to avoid concurrent writing
+  
+  try {
+    Logger.log(JSON.stringify(e)); // log the POST data in case we need to debug it
+    
+    // select the 'responses' sheet by default
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = e.parameters.formGoogleSheetName || "Sheet1";
+    var sheet = doc.getSheetByName(sheetName);
+    
+    var oldHeader = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var newHeader = oldHeader.slice();
+    var fieldsFromForm = getDataColumns(e.parameters);
+    var row = []; // first element in the row should always be a timestamp
+    
+    // loop through the header columns
+    for (var i = 0; i < oldHeader.length; i++) { // start at 1 to avoid Timestamp column
+      var field = oldHeader[i];
+      var output = getFieldFromData(field, e.parameters);
+      if(output === 'ReplaceMeNodeIndex')
+      {
+        output = ("P-" +  (sheet.getLastRow() + 2));
+      }
+      row.push(output);
+      
+      // mark as stored by removing from form fields
+      var formIndex = fieldsFromForm.indexOf(field);
+      if (formIndex > -1) {
+        fieldsFromForm.splice(formIndex, 1);
+      }
+    }
+    
+    // set any new fields in our form
+    for (var i = 0; i < fieldsFromForm.length; i++) {
+      var field = fieldsFromForm[i];
+      var output = getFieldFromData(field, e.parameters);
+      row.push(output);
+      newHeader.push(field);
+    }
+    
+    // more efficient to set values as [][] array than individually
+    var nextRow = sheet.getLastRow() + 1; // get next row
+    sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+
+    // update header row with any new data
+    if (newHeader.length > oldHeader.length) {
+      sheet.getRange(1, 1, 1, newHeader.length).setValues([newHeader]);
+    }
+  }
+  catch(error) {
+    Logger.log(error);
+  }
+  finally {
+    lock.releaseLock();
+    return;
+  }
+
+}
+
+function getDataColumns(data) {
+  return Object.keys(data).filter(function(column) {
+    return !(column === 'formDataNameOrder' || column === 'formGoogleSheetName' || column === 'formGoogleSendEmail' || column === 'honeypot');
+  });
+}
+
+function getFieldFromData(field, data) {
+  var values = data[field] || '';
+  var output = values.join ? values.join(', ') : values;
+  return output;
+}
+
+
+
+//2. Create a second gs Script and name it API.gs; paste the below code
+
+var sheetName="Sheet1";
+var doc = SpreadsheetApp.getActiveSpreadsheet();
+var sheet=doc.getSheetByName(sheetName);
+
+function doGet(request){
+
+  var requestQuery = checkQuery(request.parameter);
+  var rows = [];
+  var startrow = requestQuery.startrow;
+  var endrow = requestQuery.endrow;
+  var select = requestQuery.select;
+  var lastcolumn = sheet.getLastColumn();
+  
+  rows = getRows(startrow, endrow,select,lastcolumn)
+  return ContentService.createTextOutput(JSON.stringify({"data":rows,"error":false})).setMimeType(ContentService.MimeType.JSON);
+
+}
+
+function getRows(startrow, endrow, select, lastcolumn) {
+  rows = [];
+  if(select == null){
+    var range = sheet.getRange(startrow,1,endrow,lastcolumn);
+    var values = range.getValues();
+    for(var row in values){
+      rows.push([]);
+      for(var col in values[row]){
+        rows[row].push(values[row][col])
+      }
+    }
+  } else {
+    // for each select add a row
+
+    for(var s in select){
+      range = sheet.getRange(startrow,select[s]+1,endrow);
+      var values = range.getValues();
+      for(var row in values){
+        if(rows[row] == undefined){
+          rows.push([]);
+        }
+        rows[row].push(values[row][0])
+      }
+
+    }
+  }
+  return rows;
+}
+
+function trial(){
+
+  var requestQuery = checkQuery({
+    "start":0,
+    "count":12,
+    "select":"Name,Lattitude,Longitude"
+  });
+  var rows = [];
+  var startrow = requestQuery.startrow;
+  var endrow = requestQuery.endrow;
+  var select = requestQuery.select;
+  var lastcolumn = sheet.getLastColumn();
+  
+  rows = getRows(startrow, endrow,select,lastcolumn)
+  console.log(rows);
+}
+
+// gets all the query values
+function checkQuery(requestQuery){
+
+  //initialise the default values
+  var startrow = 2;
+  var endrow = sheet.getLastRow();
+  var select = null;
+  // check if start is undefined
+  if(requestQuery.start != undefined)
+  {
+  
+    startrow = requestQuery.start + 2;
+    if(startrow > endrow)
+    {
+      startrow = endrow;
+    }
+  }
+  // check if Count is undefined
+  if(requestQuery.count != undefined)
+  {
+    if(startrow + requestQuery.count < endrow){
+      endrow = requestQuery.count + startrow;
+    }
+  }
+  //Check if select is undefined
+  if(requestQuery.select != undefined){
+    console.log("Hellow");
+    var tempSelect = requestQuery.select.split(',');
+    console.log(tempSelect)
+    select = getSelectedColumns(tempSelect);
+    console.log(select);
+
+  }
+  return {"startrow": startrow, "endrow": endrow, "select": select}
+}
+
+function getSelectedColumns(selectArray){
+  var lastcolumn = sheet.getLastColumn();
+  var range = sheet.getRange(1,1,1,lastcolumn);
+  var values = range.getValues();
+  var selectedList = [];
+  for (var col in values[0]){
+    for(var selectedCol in selectArray){
+      if(selectArray[selectedCol].trim() == values[0][col]){
+        selectedList.push(parseInt(col));
+      }
+    }
+  }
+  return selectedList;
+}
+
+//3. Run and Debug the below code
+//4. Deploy the code as Web App execute as me(youself) and set the access to Anyone. Click Deploy
+//5. Edit in the Results page the columns that you would like to be displayed as points Lattitude and Longitude
+//6. Edit in the Results page the columns that you would like to be displayed as streets Lattitude and Longitude
